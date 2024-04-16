@@ -8,3 +8,4 @@ paddlepaddle==2.5.1
 numpy
 PyYAML==6.0.1
 ultralytics
+qreader

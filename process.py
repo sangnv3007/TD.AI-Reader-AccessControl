@@ -230,12 +230,14 @@ async def info_extraction_VNID(image_path):
                     y = (r[1] + r[3]) / 2.0
                     if class_id == 'qr_code':
                         QRs = qreader.detect_and_decode(image=image_crop)
-                        print(QRs)
+                        qr_text = QRs[0]
+                        if qr_text is not None:
+                            label_dict[class_id].update({qr_text: y})
+                    elif class_id == 'mrz':
                         continue
-                    if class_id == 'mrz':
-                        continue
-                    s = detector.predict(Image.fromarray(image_crop))
-                    label_dict[class_id].update({s: y})
+                    else:
+                        s = detector.predict(Image.fromarray(image_crop))
+                        label_dict[class_id].update({s.upper(): y})
                     
             # Include information in the dictionary
             for key, value in label_dict.items():
@@ -333,68 +335,9 @@ def perspective_transformation(image, points):
         image, M, (maxWidth, maxHeight), flags=cv2.INTER_LINEAR)
     return out
 
-# Ham tra ve thong tin tren mo hinh moi
-async def ReturnInfoNew(path, text_code, engine, ner):
-    # Tinh thoi gian tai thoi diem bat dau
-    start_time = time.time()
-
-    typeimage = check_type_image(path)
-    classes = list(engine.names.values())
-    label_dict = {key: {} for key in classes}
-
-    # Dau vao la anh co dinh dang(*.jpg,*.jpeg,*.png,...)
-    if (typeimage == 'jpg' or typeimage == 'png' or typeimage == 'jpeg'):
-        img = cv2.imread(path)
-        label_dict.update(process_image(img, engine, label_dict))                                    
-    
-    # Dau vao la file pdf dang(*.pdf)
-    elif(typeimage == 'pdf'):
-        image_url = pdf_to_image(path, text_code)
-        for url in image_url:
-            img = cv2.imread(url)
-            label_dict.update(process_image(img, engine, label_dict))
-    
-    # Dau vao khong dung dinh dang
-    else:
-        rs = {
-            "errorCode": 1,
-            "errorMessage": "Lỗi! File không đúng định dạng.",
-            "results": []
-        }
-        return rs
-    
-    # Gop cac thong tin vao tu dien
-    for key, value in label_dict.items():
-        if len(value) >=2: # Gop du lieu
-            sorted_items = sorted(value.items(), key = lambda x:x[1])
-            merged_value = ' '.join([k for k,v in sorted_items])
-            label_dict[key] = merged_value
-        elif not value: # Du lieu Null
-            label_dict[key] = None
-        else:
-            label_dict[key] = list(value.keys())[0]
-    
-    # Ham xu ly custom du lieu theo ma van ban 
-    label_dict = handle_textcode(label_dict, text_code, ner)
-
-    # Tinh thoi gian tai thoi diem ket thuc thuat toan
-    end_time = time.time()
-    
-    # Tinh tong thoi gian chay
-    elapsed_time = end_time - start_time
-
-    # Tra ve ket qua sau khi duyet qua tat ca cac anh
-    rs = {
-        "errorCode": 0,
-        "errorMessage": "",
-        "executionTime": round(elapsed_time,2),
-        "results": [label_dict]
-    }
-    return rs
-
 detector = vietocr_load()
 
-qreader = QReader(model_size = 'n',reencode_to="cp65001")
+qreader = QReader(model_size = 'n')
 engine_det, ner_det = load_model_new('./models/det/best.pt')
 engine_rec, ner_rec = load_model_new('./models/rec/best.pt')
 
