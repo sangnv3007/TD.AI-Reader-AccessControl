@@ -11,6 +11,7 @@ import json
 from pathlib import Path
 from ultralytics import YOLO
 from qreader import QReader
+import torch
 
 # Ham check dinh dang dau vao cua anh
 def check_type_image(path):
@@ -28,10 +29,12 @@ def draw_prediction(img, classes, confidence, x, y, x_plus_w, y_plus_h):
 
 # Ham load thu vien vietOCR
 def vietocr_load():
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    print(f'INFO: Using {device} for recognition tasks !!!')
     config = Cfg.load_config_from_name('vgg_transformer')
     config['weights'] = './models/transformerocr.pth'
     config['cnn']['pretrained'] = False
-    config['device'] = 'cuda:0'
+    config['device'] = device
     config['predictor']['beamsearch'] = False
     detector = Predictor(config)
     return detector

@@ -16,7 +16,7 @@ import fitz
 from starlette import status
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import Response, RedirectResponse
 from starlette.types import ASGIApp
 
 class Item(BaseModel):
@@ -48,6 +48,7 @@ origins = [
     "http://dangkyvaora.hanhchinhcong.org",
     "https://dangkyvaora.megasolution.vn",
     "https://quanlyvaora.megasolution.vn",
+    "http://localhost:3012"
 ]
 
 app.add_middleware(
@@ -60,13 +61,17 @@ app.add_middleware(
 
 app.add_middleware(LimitUploadSize, max_upload_size=10000000)  # ~10MB
 
+
+@app.get("/", include_in_schema=False)
+async def index():
+    return RedirectResponse(url="/docs")
+
 @app.post("/IdentityCard/upload")
 async def uploadFile(file: UploadFile = File(...)):
     # try:
     print(f'TD.AIReader IdentityCard INFO: {datetime.datetime.now()}')
     folder_save = 'files/IdentityCard/'
     pathSave = os.path.join(os.getcwd(),folder_save)
-    print(pathSave)
     os.makedirs(pathSave, exist_ok=True)
     with open(f'{folder_save}/{file.filename}', 'wb') as buffer:
         shutil.copyfileobj(file.file, buffer)
